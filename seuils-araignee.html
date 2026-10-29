@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>*,*::before,*::after{box-sizing:border-box}body{margin:0}</style>
+<title>Seuils araignée</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Young+Serif&family=Figtree:wght@400;500;600&display=swap">
+<style>
+/* Layout : scène 3D à gauche, pupitre du praticien à droite (empilé sur téléphone) */
+:root{
+  --bg:#eef2ee; --panel:#f8faf7; --ink:#1f2b27; --muted:#5d6b66; --line:#d5ddd8;
+  --accent:#2f6f62; --accent-ink:#ffffff; --calm:#c25b3f; --chip:#e3ebe6;
+  --display:"Young Serif", Georgia, serif; --body:"Figtree", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#141a18; --panel:#1b2320; --ink:#e7eeea; --muted:#9aaba4; --line:#2c3833;
+  --accent:#6fb8a6; --accent-ink:#0f1a17; --calm:#e48466; --chip:#24302c; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141a18; --panel:#1b2320; --ink:#e7eeea; --muted:#9aaba4; --line:#2c3833;
+  --accent:#6fb8a6; --accent-ink:#0f1a17; --calm:#e48466; --chip:#24302c; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5}
+.app{display:grid;grid-template-columns:minmax(0,1fr) 360px;height:100%}
+.viewport{position:relative;min-width:0;overflow:hidden;cursor:grab;touch-action:none}
+.viewport:active{cursor:grabbing}
+.viewport canvas{display:block;width:100%;height:100%}
+.badge{position:absolute;left:max(16px,env(safe-area-inset-left,0px));top:16px;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:600;pointer-events:none}
+.drag{position:absolute;right:16px;bottom:14px;font-size:12px;color:#33413c;background:#ffffffb0;padding:3px 10px;border-radius:6px;pointer-events:none}
+.panel{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;
+  padding-block:24px;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px));
+  display:flex;flex-direction:column;gap:22px}
+.eyebrow{margin:0;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);font-weight:600}
+h1{font-family:var(--display);font-weight:400;font-size:30px;line-height:1.1;margin:4px 0 6px;text-wrap:balance}
+.lede{margin:0;color:var(--muted);font-size:14px}
+h2{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 10px;font-weight:600}
+.scene{display:flex;flex-direction:column;min-width:0;min-height:0}
+.scene .viewport{flex:1;min-height:0}
+.dock{background:var(--panel);border-top:1px solid var(--line);display:flex;flex-direction:column;gap:8px;
+  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.dockrow{display:flex;gap:8px;align-items:stretch;min-width:0}
+ol.stages{list-style:none;margin:0;padding:0 0 2px;display:flex;gap:6px;overflow-x:auto;flex:1;min-width:0;scrollbar-width:thin}
+.stages li{flex:0 0 auto}
+.stages button{display:flex;align-items:center;gap:7px;white-space:nowrap;height:100%;
+  background:transparent;border:1px solid var(--line);border-radius:999px;padding:7px 13px 7px 8px;color:var(--ink);font:500 14px var(--body);cursor:pointer}
+.stages button:hover{background:var(--chip)}
+.stages button[aria-current="step"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.stages .n{font-family:var(--display);font-size:13px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;
+  background:var(--chip);color:var(--ink);font-variant-numeric:tabular-nums}
+.stages button[aria-current="step"] .n{background:var(--accent-ink);color:var(--accent)}
+.hint{margin:0;font-size:13px;color:var(--muted)}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.calm{flex:0 0 auto;background:var(--calm);color:#fff;border:0;border-radius:999px;padding:8px 16px;font:600 14px var(--body);cursor:pointer;white-space:nowrap}
+.row{display:grid;grid-template-columns:70px 1fr 44px;gap:10px;align-items:center;font-size:14px}
+.row output{text-align:right;font-variant-numeric:tabular-nums;color:var(--muted)}
+input[type=range]{width:100%;accent-color:var(--accent)}
+.sliders{display:flex;flex-direction:column;gap:8px}
+.vr{width:100%;background:transparent;border:1.5px solid var(--accent);color:var(--accent);border-radius:12px;padding:12px;font:600 15px var(--body);cursor:pointer}
+.vr:disabled{opacity:.5;cursor:not-allowed}
+.vrnote{font-size:13px;color:var(--muted);margin:8px 0 0}
+dl.keys{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0;font-size:14px}
+dl.keys dt{font-weight:600;background:var(--chip);border-radius:6px;padding:1px 8px;font-size:12px;align-self:start;white-space:nowrap}
+dl.keys dd{margin:0}
+.note{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:14px;margin:0}
+@media (max-width:820px){
+  .app{grid-template-columns:1fr;height:auto;display:block}
+  .scene{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;height:min(62vh,560px);box-shadow:0 6px 14px -10px rgba(0,0,0,.35)}
+  .panel{border-left:0;overflow:visible}
+}
+</style>
+
+<div class="app">
+  <div class="scene">
+    <div class="viewport" id="view">
+      <div class="badge" id="badge">Palier 0 · Lieu sûr</div>
+      <div class="drag">Glisser pour regarder autour</div>
+    </div>
+    <div class="dock">
+      <div class="dockrow">
+        <ol class="stages" id="stages" aria-label="Paliers"></ol>
+        <button class="calm" id="calmBtn" type="button">Calme</button>
+      </div>
+      <p class="hint" id="hint">Aucune araignée. Respiration, ancrage.</p>
+    </div>
+  </div>
+  <aside class="panel">
+    <div>
+      <p class="eyebrow">Prototype · exposition progressive</p>
+      <h1>Seuils araignée</h1>
+      <p class="lede">Une pièce paisible où l’araignée n’apparaît que palier par palier. Le praticien garde la main à chaque instant.</p>
+    </div>
+
+    <section>
+      <h2>Réglages</h2>
+      <div class="sliders">
+        <label class="row" for="size">Taille <input id="size" type="range" min="0.4" max="2" step="0.1" value="1"><output id="sizeOut">×1,0</output></label>
+        <label class="row" for="speed">Vitesse <input id="speed" type="range" min="0" max="2" step="0.1" value="0.6"><output id="speedOut">×0,6</output></label>
+      </div>
+    </section>
+
+    <section>
+      <h2>Casque Meta Quest</h2>
+      <button class="vr" id="vrBtn" type="button" disabled>Recherche du casque…</button>
+      <p class="vrnote" id="vrNote">Ouvrez cette page dans le navigateur du Quest pour entrer dans la pièce.</p>
+    </section>
+
+    <section>
+      <h2>Manettes dans le casque</h2>
+      <dl class="keys">
+        <dt>A / X</dt><dd>Palier suivant</dd>
+        <dt>B / Y</dt><dd>Palier précédent</dd>
+        <dt>Grip</dt><dd>Revenir au calme (gâchette latérale, une main suffit)</dd>
+      </dl>
+    </section>
+
+    <p class="note">Prototype de démonstration. Il ne remplace pas l’accompagnement d’un praticien : c’est lui qui choisit le rythme, observe les réactions et ramène au lieu sûr dès que nécessaire.</p>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.149.0/build/three.min.js"></script>
+<script>
+(() => {
+const STAGES = [
+  { name:'Lieu sûr',     hint:'Aucune araignée. Respiration, ancrage.' },
+  { name:'Dessin',       hint:'Une illustration douce sur un chevalet, à 3,5 m.' },
+  { name:'Bocal',        hint:'Petite araignée stylisée, immobile, sous verre, à 2 m.' },
+  { name:'Sur la table', hint:'Araignée réaliste qui marche lentement sur la table, à 2 m.' },
+  { name:'Au sol',       hint:'Elle marche au sol, entre 2 m et 1,2 m de vous.' },
+  { name:'Tout près',    hint:'Elle se promène au sol à moins d’un mètre.' }
+];
+const TABLE = { x:0, z:-2.2, y:0.77 };
+const CONF = [
+  null,
+  null,
+  { type:'cartoon', y:TABLE.y, cx:TABLE.x+0.12, cz:TABLE.z, r:0,    walk:false, jar:true },
+  { type:'real',    y:TABLE.y, cx:TABLE.x,      cz:TABLE.z, r:0.42, walk:true },
+  { type:'real',    y:0,       cx:0.5,          cz:-1.6,    r:0.45, walk:true },
+  { type:'real',    y:0,       cx:0.35,         cz:-0.75,   r:0.25, walk:true }
+];
+
+/* ---------- moteur ---------- */
+const view = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.xr.enabled = true;
+view.appendChild(renderer.domElement);
+
+const scene = new THREE.Scene();
+const SKY = 0xdde8e2;
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 7, 20);
+
+const camera = new THREE.PerspectiveCamera(70, 1, 0.03, 60);
+camera.position.set(0, 1.25, 0);
+camera.rotation.order = 'YXZ';
+camera.rotation.x = -0.18;
+scene.add(camera);
+
+scene.add(new THREE.HemisphereLight(0xfff7ea, 0x8fa595, 0.85));
+const sun = new THREE.DirectionalLight(0xfff0d8, 0.85);
+sun.position.set(3, 6, 1.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(1024, 1024);
+Object.assign(sun.shadow.camera, { left:-4, right:4, top:4, bottom:-4, near:1, far:15 });
+scene.add(sun);
+
+const mat = (c, o={}) => new THREE.MeshStandardMaterial(Object.assign({ color:c, roughness:0.85 }, o));
+const shadowy = m => { m.castShadow = true; m.receiveShadow = true; return m; };
+
+/* sol, tapis, murs bas */
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), mat(0xcdb99a));
+floor.rotation.x = -Math.PI/2; floor.receiveShadow = true; scene.add(floor);
+const rug = new THREE.Mesh(new THREE.CircleGeometry(1.6, 64), mat(0x9fb8ad));
+rug.rotation.x = -Math.PI/2; rug.position.set(0, 0.003, -1.4); rug.receiveShadow = true; scene.add(rug);
+const wallMat = mat(0xeee7dc);
+[[0,-6,0],[-6,0,Math.PI/2],[6,0,-Math.PI/2],[0,6,Math.PI]].forEach(([x,z,ry]) => {
+  const w = new THREE.Mesh(new THREE.PlaneGeometry(12, 3.2), wallMat);
+  w.position.set(x, 1.6, z); w.rotation.y = ry; w.receiveShadow = true; scene.add(w);
+});
+/* fenêtre lumineuse sur le mur du fond */
+const win = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.4), new THREE.MeshBasicMaterial({ color:0xbfdde6 }));
+win.position.set(-2, 1.8, -5.98); scene.add(win);
+const sea = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 0.45), new THREE.MeshBasicMaterial({ color:0x5e93a3 }));
+sea.position.set(-2, 1.32, -5.97); scene.add(sea);
+
+/* table */
+const table = new THREE.Group();
+table.add(shadowy(new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.6, 0.04, 48), mat(0x8b6a4a))));
+table.children[0].position.y = 0.75;
+const leg = shadowy(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.07, 0.73, 16), mat(0x6e523a)));
+leg.position.y = 0.365; table.add(leg);
+const foot = shadowy(new THREE.Mesh(new THREE.CylinderGeometry(0.28, 0.3, 0.03, 32), mat(0x6e523a)));
+foot.position.y = 0.015; table.add(foot);
+table.position.set(TABLE.x, 0, TABLE.z); scene.add(table);
+
+/* plantes */
+function plant(x, z, s) {
+  const g = new THREE.Group();
+  const pot = shadowy(new THREE.Mesh(new THREE.CylinderGeometry(0.18, 0.14, 0.3, 24), mat(0xb86b4b)));
+  pot.position.y = 0.15; g.add(pot);
+  [[0,0.55,0,0.28],[0.12,0.75,0.05,0.2],[-0.1,0.7,-0.06,0.22]].forEach(([a,b,c,r]) => {
+    const f = shadowy(new THREE.Mesh(new THREE.IcosahedronGeometry(r, 1), mat(0x5f8f63, { flatShading:true })));
+    f.position.set(a,b,c); g.add(f);
+  });
+  g.position.set(x, 0, z); g.scale.setScalar(s); scene.add(g);
+}
+plant(-1.8, -3.4, 1.3); plant(2.2, -2.8, 1); plant(-2.6, -0.6, 0.9); plant(2.8, 0.6, 1.2);
+
+/* chevalet + dessin doux */
+const easel = new THREE.Group();
+const wood = mat(0x9a7a58);
+[[-0.3,0.12],[0.3,-0.12]].forEach(([x,rz]) => {
+  const p = shadowy(new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.8, 0.04), wood));
+  p.position.set(x, 0.9, 0); p.rotation.z = rz; easel.add(p);
+});
+const back = shadowy(new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.6, 0.04), wood));
+back.position.set(0, 0.8, -0.3); back.rotation.x = -0.35; easel.add(back);
+const shelf = shadowy(new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.03, 0.08), wood));
+shelf.position.set(0, 0.92, 0.04); easel.add(shelf);
+function drawingTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512;
+  const g = c.getContext('2d');
+  g.fillStyle = '#fbf7ef'; g.fillRect(0,0,512,512);
+  g.strokeStyle = '#6b4a3a'; g.lineWidth = 9; g.lineCap = 'round';
+  for (let s of [-1,1]) for (let i=0;i<4;i++) {
+    const y = 250 + (i-1.5)*34;
+    g.beginPath(); g.moveTo(256+s*40, y);
+    g.quadraticCurveTo(256+s*120, y-60+i*10, 256+s*170, y+40+i*18); g.stroke();
+  }
+  g.fillStyle = '#e0a77a'; g.beginPath(); g.ellipse(256, 320, 70, 80, 0, 0, Math.PI*2); g.fill();
+  g.fillStyle = '#eab78c'; g.beginPath(); g.arc(256, 225, 58, 0, Math.PI*2); g.fill();
+  g.fillStyle = '#fff'; [[-22],[22]].forEach(([dx]) => { g.beginPath(); g.arc(256+dx, 215, 16, 0, Math.PI*2); g.fill(); });
+  g.fillStyle = '#2b2b2b'; [[-20],[24]].forEach(([dx]) => { g.beginPath(); g.arc(256+dx, 218, 7, 0, Math.PI*2); g.fill(); });
+  g.strokeStyle = '#2b2b2b'; g.lineWidth = 5; g.beginPath(); g.arc(256, 238, 16, 0.2, Math.PI-0.2); g.stroke();
+  g.fillStyle = '#e88c7d88'; [[-38],[38]].forEach(([dx]) => { g.beginPath(); g.arc(256+dx, 244, 10, 0, Math.PI*2); g.fill(); });
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return t;
+}
+const canvasBoard = new THREE.Mesh(new THREE.PlaneGeometry(0.62, 0.62), new THREE.MeshStandardMaterial({ color:0xfbf7ef, roughness:0.9 }));
+canvasBoard.position.set(0, 1.27, 0.06); canvasBoard.rotation.x = -0.05; easel.add(canvasBoard);
+const drawingMat = new THREE.MeshStandardMaterial({ map:drawingTexture(), roughness:0.9 });
+const blankMat = canvasBoard.material;
+easel.position.set(1.3, 0, -3.5); easel.rotation.y = -0.3; scene.add(easel);
+
+/* bocal */
+const jar = new THREE.Group();
+const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.13, 0.24, 36, 1, true),
+  new THREE.MeshStandardMaterial({ color:0xdff2f0, transparent:true, opacity:0.28, roughness:0.1, side:THREE.DoubleSide, depthWrite:false }));
+glass.position.y = 0.12; jar.add(glass);
+const lid = shadowy(new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.03, 36), mat(0x6f8f86, { roughness:0.5 })));
+lid.position.y = 0.255; jar.add(lid);
+jar.position.set(TABLE.x+0.12, TABLE.y, TABLE.z); jar.visible = false; scene.add(jar);
+
+/* ---------- araignées ---------- */
+function makeSpider(style) {
+  const cartoon = style === 'cartoon';
+  const bodyC = cartoon ? 0xd89a6a : 0x3b2a20, legC = cartoon ? 0x8a5a3c : 0x2a1d16;
+  const g = new THREE.Group(), legs = [];
+  const bm = mat(bodyC, { roughness: cartoon ? 0.6 : 0.9 }), lm = mat(legC);
+  const abdomen = shadowy(new THREE.Mesh(new THREE.SphereGeometry(0.1, 24, 16), bm));
+  abdomen.scale.set(1, 0.85, 1.25); abdomen.position.set(0, 0.075, -0.1); g.add(abdomen);
+  const head = shadowy(new THREE.Mesh(new THREE.SphereGeometry(0.065, 20, 14), bm));
+  head.scale.set(1, 0.8, 1.1); head.position.set(0, 0.065, 0.06); g.add(head);
+  if (cartoon) {
+    [-1,1].forEach(s => {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.024, 14, 10), mat(0xffffff, { roughness:0.3 }));
+      e.position.set(s*0.026, 0.095, 0.11); g.add(e);
+      const p = new THREE.Mesh(new THREE.SphereGeometry(0.012, 10, 8), mat(0x1d1d1d, { roughness:0.3 }));
+      p.position.set(s*0.026, 0.097, 0.13); g.add(p);
+    });
+  } else {
+    for (let i=0;i<4;i++) {
+      const e = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), mat(0x050505, { roughness:0.2 }));
+      e.position.set((i-1.5)*0.014, 0.09, 0.115); g.add(e);
+    }
+  }
+  const L1 = cartoon ? 0.11 : 0.14, L2 = cartoon ? 0.13 : 0.18, R = cartoon ? 0.011 : 0.007;
+  const seg = len => { const geo = new THREE.CylinderGeometry(R*0.8, R, len, 6); geo.rotateZ(-Math.PI/2); geo.translate(len/2, 0, 0); return shadowy(new THREE.Mesh(geo, lm)); };
+  for (const s of [1,-1]) for (let i=0;i<4;i++) {
+    const a = 0.75 - i*0.5;
+    const root = new THREE.Group();
+    root.position.set(s*0.035, 0.065, 0.1 - i*0.035);
+    const baseYaw = s > 0 ? -a : Math.PI + a;
+    root.rotation.y = baseYaw;
+    const hip = new THREE.Group(); hip.rotation.z = 0.7; root.add(hip);
+    hip.add(seg(L1));
+    const knee = new THREE.Group(); knee.position.x = L1; knee.rotation.z = -1.9; hip.add(knee);
+    knee.add(seg(L2));
+    g.add(root);
+    legs.push({ root, hip, baseYaw, phase: ((i + (s>0?0:1)) % 2) * Math.PI });
+  }
+  g.userData.legs = legs;
+  g.visible = false;
+  scene.add(g);
+  return g;
+}
+const spiders = { cartoon: makeSpider('cartoon'), real: makeSpider('real') };
+
+/* panneau texte visible seulement dans le casque */
+const labelCanvas = document.createElement('canvas'); labelCanvas.width = 1024; labelCanvas.height = 160;
+const labelTex = new THREE.CanvasTexture(labelCanvas); labelTex.encoding = THREE.sRGBEncoding;
+const label = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.25), new THREE.MeshBasicMaterial({ map:labelTex, transparent:true }));
+label.position.set(0, 2.25, -3.2); label.visible = false; scene.add(label);
+function drawLabel(i) {
+  const g = labelCanvas.getContext('2d');
+  g.clearRect(0,0,1024,160);
+  g.fillStyle = 'rgba(248,250,247,0.92)';
+  g.beginPath(); g.roundRect ? g.roundRect(10,10,1004,140,70) : g.rect(10,10,1004,140); g.fill();
+  g.fillStyle = '#1f2b27'; g.font = '600 56px Figtree, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  g.fillText(`Palier ${i} · ${STAGES[i].name}`, 512, 82);
+  labelTex.needsUpdate = true;
+}
+
+/* ---------- état ---------- */
+let stage = 0, applied = 0, pending = null;
+let fade = 0, fadeTarget = 0;
+const walker = { x:0, z:0, h:0, conf:null, spider:null, t:0 };
+const sizeEl = document.getElementById('size'), speedEl = document.getElementById('speed');
+
+function applyStage(i) {
+  applied = i;
+  const c = CONF[i];
+  Object.values(spiders).forEach(s => s.visible = false);
+  jar.visible = !!(c && c.jar);
+  canvasBoard.material = i >= 1 ? drawingMat : blankMat;
+  walker.conf = c;
+  if (!c) { walker.spider = null; fadeTarget = 0; return; }
+  walker.spider = spiders[c.type];
+  walker.spider.visible = true;
+  const ang = Math.random() * Math.PI * 2;
+  walker.x = c.cx + Math.cos(ang) * c.r * 0.5;
+  walker.z = c.cz + Math.sin(ang) * c.r * 0.5;
+  walker.h = Math.atan2(-walker.x, -walker.z); // regarde vers le patient
+  fadeTarget = 1;
+}
+function setStage(i) {
+  stage = Math.max(0, Math.min(STAGES.length - 1, i));
+  pending = stage; fadeTarget = 0;
+  renderUI(); drawLabel(stage);
+}
+function calm() { setStage(0); }
+
+/* ---------- UI ---------- */
+const list = document.getElementById('stages');
+STAGES.forEach((s, i) => {
+  const li = document.createElement('li');
+  li.innerHTML = `<button type="button" id="st${i}" title="${s.hint}"><span class="n">${i}</span>${s.name}</button>`;
+  li.firstChild.addEventListener('click', () => setStage(i));
+  list.appendChild(li);
+});
+function renderUI() {
+  STAGES.forEach((_, i) => {
+    const b = document.getElementById('st'+i);
+    if (i === stage) b.setAttribute('aria-current','step'); else b.removeAttribute('aria-current');
+  });
+  document.getElementById('badge').textContent = `Palier ${stage} · ${STAGES[stage].name}`;
+  document.getElementById('hint').textContent = STAGES[stage].hint;
+  const cur = document.getElementById('st'+stage);
+  if (cur && cur.scrollIntoView) cur.scrollIntoView({ block:'nearest', inline:'nearest', behavior:'smooth' });
+}
+const fmt = v => '×' + Number(v).toFixed(1).replace('.', ',');
+sizeEl.addEventListener('input', () => document.getElementById('sizeOut').textContent = fmt(sizeEl.value));
+speedEl.addEventListener('input', () => document.getElementById('speedOut').textContent = fmt(speedEl.value));
+document.getElementById('calmBtn').addEventListener('click', calm);
+addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT') return;
+  if (e.key === 'Escape' || e.key === ' ') { e.preventDefault(); calm(); }
+  if (e.key === 'ArrowRight') setStage(stage + 1);
+  if (e.key === 'ArrowLeft') setStage(stage - 1);
+});
+renderUI(); drawLabel(0);
+
+/* regard à la souris / au doigt hors casque */
+let drag = null, yaw = 0, pitch = -0.18;
+view.addEventListener('pointerdown', e => { drag = { x:e.clientX, y:e.clientY }; view.setPointerCapture(e.pointerId); });
+view.addEventListener('pointermove', e => {
+  if (!drag) return;
+  yaw += (e.clientX - drag.x) * 0.005; pitch += (e.clientY - drag.y) * 0.004;
+  pitch = Math.max(-1.1, Math.min(0.8, pitch));
+  drag = { x:e.clientX, y:e.clientY };
+});
+view.addEventListener('pointerup', () => drag = null);
+view.addEventListener('pointercancel', () => drag = null);
+
+function resize() {
+  const w = view.clientWidth, h = view.clientHeight;
+  renderer.setSize(w, h, false); camera.aspect = w / Math.max(h,1); camera.updateProjectionMatrix();
+}
+new ResizeObserver(resize).observe(view); resize();
+
+/* ---------- casque ---------- */
+const vrBtn = document.getElementById('vrBtn'), vrNote = document.getElementById('vrNote');
+let session = null;
+if (navigator.xr && navigator.xr.isSessionSupported) {
+  navigator.xr.isSessionSupported('immersive-vr').then(ok => {
+    vrBtn.disabled = !ok;
+    vrBtn.textContent = ok ? 'Entrer dans la pièce' : 'Casque non détecté';
+    if (ok) vrNote.textContent = 'Le patient s’assoit, met le casque, puis appuie ici.';
+  }).catch(() => { vrBtn.textContent = 'Casque non détecté'; });
+} else {
+  vrBtn.textContent = 'Casque non détecté';
+}
+vrBtn.addEventListener('click', async () => {
+  if (session) { session.end(); return; }
+  try {
+    session = await navigator.xr.requestSession('immersive-vr', { optionalFeatures:['local-floor'] });
+    renderer.xr.setReferenceSpaceType('local-floor');
+    await renderer.xr.setSession(session);
+    label.visible = true; vrBtn.textContent = 'Quitter la pièce';
+    session.addEventListener('end', () => { session = null; label.visible = false; vrBtn.textContent = 'Entrer dans la pièce'; });
+  } catch (err) {
+    session = null;
+    vrNote.textContent = 'Le casque a refusé l’accès. Ouvrez le fichier hébergé directement (pas dans un aperçu) dans le navigateur du Quest.';
+  }
+});
+const prevPads = new Map();
+function pollPads() {
+  const s = renderer.xr.getSession(); if (!s) return;
+  for (const src of s.inputSources) {
+    const b = src.gamepad && src.gamepad.buttons; if (!b) continue;
+    const now = [b[4] && b[4].pressed, b[5] && b[5].pressed, b[1] && b[1].pressed];
+    const was = prevPads.get(src.handedness) || [];
+    if (now[2] && !was[2]) calm();
+    else if (now[0] && !was[0]) setStage(stage + 1);
+    else if (now[1] && !was[1]) setStage(stage - 1);
+    prevPads.set(src.handedness, now);
+  }
+}
+
+/* ---------- boucle ---------- */
+const clock = new THREE.Clock();
+renderer.setAnimationLoop(() => {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  if (!renderer.xr.isPresenting) { camera.rotation.y = -yaw; camera.rotation.x = pitch; camera.position.set(0, 1.25, 0); }
+  pollPads();
+
+  fade += (fadeTarget - fade) * Math.min(1, dt * (fadeTarget > fade ? 2.2 : 7));
+  if (pending !== null && fade < 0.02) { applyStage(pending); pending = null; }
+
+  const sp = walker.spider, c = walker.conf;
+  if (sp && c) {
+    const speed = c.walk ? parseFloat(speedEl.value) : 0;
+    const v = 0.09 * speed;
+    walker.t += dt * (speed > 0 ? 6 + 6 * speed : 1.2);
+    if (c.walk && speed > 0) {
+      walker.h += Math.sin(walker.t * 0.13) * 0.6 * dt;
+      const dx = c.cx - walker.x, dz = c.cz - walker.z;
+      if (Math.hypot(dx, dz) > c.r) {
+        const target = Math.atan2(dx, dz);
+        let d = target - walker.h; d = Math.atan2(Math.sin(d), Math.cos(d));
+        walker.h += d * Math.min(1, dt * 2.5);
+      }
+      walker.x += Math.sin(walker.h) * v * dt;
+      walker.z += Math.cos(walker.h) * v * dt;
+    }
+    sp.position.set(walker.x, c.y, walker.z);
+    if (c.jar) sp.position.y = c.y + 0.005;
+    sp.rotation.y = walker.h;
+    const scale = (c.jar ? 0.55 : 0.6) * parseFloat(sizeEl.value) * Math.max(0.001, fade);
+    sp.scale.setScalar(scale);
+    const amp = c.walk && speed > 0 ? 0.28 : 0.04;
+    for (const l of sp.userData.legs) {
+      const p = walker.t + l.phase;
+      l.root.rotation.y = l.baseYaw + Math.sin(p) * amp;
+      l.hip.rotation.z = 0.7 + Math.max(0, Math.cos(p)) * amp * 0.9;
+    }
+    sp.position.y += Math.abs(Math.sin(walker.t)) * 0.004 * (amp > 0.1 ? 1 : 0);
+  }
+  renderer.render(scene, camera);
+});
+})();
+</script>
+
+</html>
